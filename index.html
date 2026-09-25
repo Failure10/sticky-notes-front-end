@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patient Management System</title>
   
-  <!-- Firebase SDKs for Real-Time Sync (No local backend required) -->
+  <!-- Firebase SDKs for Real-Time Global Sync -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -252,7 +252,7 @@
             <textarea id="patientNotes" placeholder="Enter clinical notes..."></textarea>
           </div>
 
-          <button type="submit" class="btn">Publish Record Globally</button>
+          <button type="submit" class="btn" id="submitBtn">Publish Record Globally</button>
         </form>
 
         <div class="error-log" id="errorLog"></div>
@@ -267,7 +267,7 @@
   </div>
 
   <script>
-    // --- 1. FIXED THEME SWITCHER LOGIC ---
+    // --- 1. THEME SWITCHER LOGIC ---
     const themeSelect = document.getElementById('themeSelect');
     
     function applyTheme(themeName) {
@@ -283,13 +283,12 @@
       applyTheme(e.target.value);
     });
 
-    // Restore saved theme on page load
     const savedTheme = localStorage.getItem('selectedTheme') || 'dark-glass';
     themeSelect.value = savedTheme;
     applyTheme(savedTheme);
 
 
-    // --- 2. GLOBAL REAL-TIME SYNC SETUP (Public Cloud Sync) ---
+    // --- 2. GLOBAL SYNC INITIALIZATION ---
     const firebaseConfig = {
       databaseURL: "https://public-sync-notes-default-rtdb.firebaseio.com/"
     };
@@ -299,11 +298,13 @@
     const recordsRef = database.ref('shared_patient_records');
 
 
-    // --- 3. AUTO PATIENT ID GENERATION ---
+    // --- 3. PATIENT ID AUTO-FILL (IMMEDIATE INITIALIZATION) ---
     let currentIdCount = 101;
     function updatePatientIdDisplay() {
       document.getElementById('patientId').value = `P-${currentIdCount}`;
     }
+    // Set immediate default on load
+    updatePatientIdDisplay();
 
 
     // --- 4. REAL-TIME DATA SYNC LISTENER ---
@@ -349,13 +350,11 @@
     }
 
 
-    // --- 5. FORM SUBMISSION & VALIDATION ---
+    // --- 5. FORM SUBMISSION & ENTER KEY FIX ---
     const form = document.getElementById('patientForm');
     const errorLog = document.getElementById('errorLog');
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
+    function handleFormSubmit() {
       const name = document.getElementById('patientName').value.trim();
       const month = document.getElementById('dobMonth').value.trim();
       const day = document.getElementById('dobDay').value.trim();
@@ -383,7 +382,6 @@
         timestamp: Date.now()
       };
 
-      // Push directly to public cloud sync
       recordsRef.push(newRecord);
 
       // Reset Inputs
@@ -392,6 +390,20 @@
       document.getElementById('dobDay').value = '';
       document.getElementById('dobYear').value = '';
       document.getElementById('patientNotes').value = '';
+    }
+
+    // Direct Form Submit Event (Triggers on Enter inside any text input)
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleFormSubmit();
+    });
+
+    // Explicit Enter-key listener for fields and textarea
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleFormSubmit();
+      }
     });
   </script>
 </body>
