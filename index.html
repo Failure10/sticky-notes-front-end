@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Management System</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
+      --panel-bg: rgba(255, 255, 255, 0.05);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --input-bg: rgba(255, 255, 255, 0.07);
+      --error-color: #f43f5e;
+    }
+
+    [data-theme="light-glass"] {
+      --bg-gradient: linear-gradient(135deg, #e0e7ff, #fae8ff, #fce7f3);
+      --panel-bg: rgba(255, 255, 255, 0.45);
+      --panel-border: rgba(255, 255, 255, 0.6);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --accent: #4f46e5;
+      --accent-glow: rgba(79, 70, 229, 0.25);
+      --input-bg: rgba(255, 255, 255, 0.5);
+    }
+
+    [data-theme="neon-aurora"] {
+      --bg-gradient: linear-gradient(135deg, #030712, #064e3b, #022c22);
+      --panel-bg: rgba(16, 185, 129, 0.05);
+      --panel-border: rgba(52, 211, 153, 0.2);
+      --text-main: #ecfdf5;
+      --text-muted: #6ee7b7;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.4);
+      --input-bg: rgba(6, 78, 59, 0.2);
+    }
+
+    [data-theme="cyberpunk"] {
+      --bg-gradient: linear-gradient(135deg, #180828, #2a0845, #4a0040);
+      --panel-bg: rgba(236, 72, 153, 0.08);
+      --panel-border: rgba(244, 114, 182, 0.3);
+      --text-main: #fdf2f8;
+      --text-muted: #f472b6;
+      --accent: #f43f5e;
+      --accent-glow: rgba(244, 63, 94, 0.5);
+      --input-bg: rgba(88, 28, 135, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .glass-container {
+      width: 100%;
+      max-width: 900px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .theme-selector select {
+      background: var(--input-bg);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      padding: 8px 16px;
+      border-radius: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-layout { grid-template-columns: 1fr; }
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .dob-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .error-log {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid var(--error-color);
+      color: var(--error-color);
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    .records-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .record-card {
+      background: var(--input-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .record-id {
+      color: var(--accent);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glass-container">
+    <header>
+      <h1>Patient Records</h1>
+      <div class="theme-selector">
+        <select id="themeSelect">
+          <option value="dark-glass">Dark Glass</option>
+          <option value="light-glass">Light Glass</option>
+          <option value="neon-aurora">Neon Aurora</option>
+          <option value="cyberpunk">Cyberpunk</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="grid-layout">
+      <div>
+        <form id="patientForm" novalidate>
+          <div class="form-group">
+            <label>Patient ID</label>
+            <input type="text" id="patientId" readonly />
+          </div>
+
+          <div class="form-group">
+            <label>Patient Name</label>
+            <input type="text" id="patientName" placeholder="John Doe" />
+          </div>
+
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <div class="dob-group">
+              <input type="number" id="dobMonth" placeholder="MM" min="1" max="12" />
+              <input type="number" id="dobDay" placeholder="DD" min="1" max="31" />
+              <input type="number" id="dobYear" placeholder="YYYY" min="1900" max="2026" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="patientNotes" placeholder="Enter clinical notes..."></textarea>
+          </div>
+
+          <button type="submit" class="btn">Save Record</button>
+        </form>
+
+        <div class="error-log" id="errorLog"></div>
+      </div>
+
+      <div>
+        <h2>Synced Records</h2>
+        <br />
+        <div class="records-list" id="recordsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme Switcher
+    document.getElementById('themeSelect').addEventListener('change', (e) => {
+      document.documentElement.setAttribute('data-theme', e.target.value);
+    });
+
+    // Patient ID Generator
+    let currentIdCount = 101;
+    function generatePatientId() {
+      return `P-${currentIdCount}`;
+    }
+    document.getElementById('patientId').value = generatePatientId();
+
+    // Form Handling & Validation
+    const form = document.getElementById('patientForm');
+    const errorLog = document.getElementById('errorLog');
+    const recordsList = document.getElementById('recordsList');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('patientName').value.trim();
+      const month = document.getElementById('dobMonth').value.trim();
+      const day = document.getElementById('dobDay').value.trim();
+      const year = document.getElementById('dobYear').value.trim();
+      const notes = document.getElementById('patientNotes').value.trim();
+
+      let errors = [];
+      if (!name) errors.push('Patient Name');
+      if (!month || !day || !year) errors.push('Complete Date of Birth');
+      if (!notes) errors.push('Notes');
+
+      if (errors.length > 0) {
+        errorLog.style.display = 'block';
+        errorLog.innerHTML = `<strong>Error:</strong> Missing fields: ${errors.join(', ')}.`;
+        return;
+      }
+
+      errorLog.style.display = 'none';
+
+      const patientData = {
+        patientId: document.getElementById('patientId').value,
+        name,
+        dob: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+        notes
+      };
+
+      // Display Record Card
+      const card = document.createElement('div');
+      card.className = 'record-card';
+      card.innerHTML = `
+        <div class="record-header">
+          <span>${patientData.name}</span>
+          <span class="record-id">${patientData.patientId}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">DOB: ${patientData.dob}</div>
+        <div style="font-size: 0.9rem;">${patientData.notes}</div>
+      `;
+      recordsList.prepend(card);
+
+      // Increment Auto ID
+      currentIdCount++;
+      document.getElementById('patientId').value = generatePatientId();
+
+      // Reset Inputs
+      document.getElementById('patientName').value = '';
+      document.getElementById('dobMonth').value = '';
+      document.getElementById('dobDay').value = '';
+      document.getElementById('dobYear').value = '';
+      document.getElementById('patientNotes').value = '';
+    });
+  </script>
+</body>
+</html>
