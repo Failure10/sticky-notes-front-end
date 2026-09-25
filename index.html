@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patient Management System</title>
+  
+  <!-- Firebase SDKs for Real-Time Sync (No local backend required) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
@@ -19,42 +24,42 @@
 
     [data-theme="light-glass"] {
       --bg-gradient: linear-gradient(135deg, #e0e7ff, #fae8ff, #fce7f3);
-      --panel-bg: rgba(255, 255, 255, 0.45);
-      --panel-border: rgba(255, 255, 255, 0.6);
+      --panel-bg: rgba(255, 255, 255, 0.55);
+      --panel-border: rgba(255, 255, 255, 0.7);
       --text-main: #0f172a;
       --text-muted: #475569;
       --accent: #4f46e5;
       --accent-glow: rgba(79, 70, 229, 0.25);
-      --input-bg: rgba(255, 255, 255, 0.5);
+      --input-bg: rgba(255, 255, 255, 0.6);
     }
 
     [data-theme="neon-aurora"] {
       --bg-gradient: linear-gradient(135deg, #030712, #064e3b, #022c22);
-      --panel-bg: rgba(16, 185, 129, 0.05);
-      --panel-border: rgba(52, 211, 153, 0.2);
+      --panel-bg: rgba(16, 185, 129, 0.08);
+      --panel-border: rgba(52, 211, 153, 0.25);
       --text-main: #ecfdf5;
       --text-muted: #6ee7b7;
       --accent: #10b981;
       --accent-glow: rgba(16, 185, 129, 0.4);
-      --input-bg: rgba(6, 78, 59, 0.2);
+      --input-bg: rgba(6, 78, 59, 0.3);
     }
 
     [data-theme="cyberpunk"] {
       --bg-gradient: linear-gradient(135deg, #180828, #2a0845, #4a0040);
-      --panel-bg: rgba(236, 72, 153, 0.08);
-      --panel-border: rgba(244, 114, 182, 0.3);
+      --panel-bg: rgba(236, 72, 153, 0.1);
+      --panel-border: rgba(244, 114, 182, 0.35);
       --text-main: #fdf2f8;
       --text-muted: #f472b6;
       --accent: #f43f5e;
       --accent-glow: rgba(244, 63, 94, 0.5);
-      --input-bg: rgba(88, 28, 135, 0.25);
+      --input-bg: rgba(88, 28, 135, 0.3);
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+      transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
@@ -91,10 +96,16 @@
       background: var(--input-bg);
       color: var(--text-main);
       border: 1px solid var(--panel-border);
-      padding: 8px 16px;
+      padding: 10px 16px;
       border-radius: 12px;
       outline: none;
       cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .theme-selector select option {
+      background: #1e1b4b;
+      color: #ffffff;
     }
 
     .grid-layout {
@@ -188,13 +199,22 @@
       color: var(--accent);
       font-size: 0.85rem;
     }
+
+    .sync-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
 
   <div class="glass-container">
     <header>
-      <h1>Patient Records</h1>
+      <div>
+        <h1>Patient Records</h1>
+        <div class="sync-status" id="syncStatus">Live Global Sync Active</div>
+      </div>
       <div class="theme-selector">
         <select id="themeSelect">
           <option value="dark-glass">Dark Glass</option>
@@ -232,14 +252,14 @@
             <textarea id="patientNotes" placeholder="Enter clinical notes..."></textarea>
           </div>
 
-          <button type="submit" class="btn">Save Record</button>
+          <button type="submit" class="btn">Publish Record Globally</button>
         </form>
 
         <div class="error-log" id="errorLog"></div>
       </div>
 
       <div>
-        <h2>Synced Records</h2>
+        <h2>Live Shared Records</h2>
         <br />
         <div class="records-list" id="recordsList"></div>
       </div>
@@ -247,22 +267,91 @@
   </div>
 
   <script>
-    // Theme Switcher
-    document.getElementById('themeSelect').addEventListener('change', (e) => {
-      document.documentElement.setAttribute('data-theme', e.target.value);
+    // --- 1. FIXED THEME SWITCHER LOGIC ---
+    const themeSelect = document.getElementById('themeSelect');
+    
+    function applyTheme(themeName) {
+      if (themeName === 'dark-glass') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', themeName);
+      }
+      localStorage.setItem('selectedTheme', themeName);
+    }
+
+    themeSelect.addEventListener('change', (e) => {
+      applyTheme(e.target.value);
     });
 
-    // Patient ID Generator
-    let currentIdCount = 101;
-    function generatePatientId() {
-      return `P-${currentIdCount}`;
-    }
-    document.getElementById('patientId').value = generatePatientId();
+    // Restore saved theme on page load
+    const savedTheme = localStorage.getItem('selectedTheme') || 'dark-glass';
+    themeSelect.value = savedTheme;
+    applyTheme(savedTheme);
 
-    // Form Handling & Validation
+
+    // --- 2. GLOBAL REAL-TIME SYNC SETUP (Public Cloud Sync) ---
+    const firebaseConfig = {
+      databaseURL: "https://public-sync-notes-default-rtdb.firebaseio.com/"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const recordsRef = database.ref('shared_patient_records');
+
+
+    // --- 3. AUTO PATIENT ID GENERATION ---
+    let currentIdCount = 101;
+    function updatePatientIdDisplay() {
+      document.getElementById('patientId').value = `P-${currentIdCount}`;
+    }
+
+
+    // --- 4. REAL-TIME DATA SYNC LISTENER ---
+    const recordsList = document.getElementById('recordsList');
+
+    recordsRef.on('value', (snapshot) => {
+      recordsList.innerHTML = '';
+      const data = snapshot.val();
+      
+      if (data) {
+        const recordsArray = Object.values(data);
+        recordsArray.sort((a, b) => b.timestamp - a.timestamp);
+        
+        recordsArray.forEach(renderRecordCard);
+        
+        // Auto-increment ID based on highest existing record count
+        currentIdCount = 101 + recordsArray.length;
+      } else {
+        currentIdCount = 101;
+      }
+      
+      updatePatientIdDisplay();
+    });
+
+    function renderRecordCard(patientData) {
+      const card = document.createElement('div');
+      card.className = 'record-card';
+      card.innerHTML = `
+        <div class="record-header">
+          <span>${escapeHtml(patientData.name)}</span>
+          <span class="record-id">${escapeHtml(patientData.patientId)}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">DOB: ${escapeHtml(patientData.dob)}</div>
+        <div style="font-size: 0.9rem;">${escapeHtml(patientData.notes)}</div>
+      `;
+      recordsList.appendChild(card);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+    }
+
+
+    // --- 5. FORM SUBMISSION & VALIDATION ---
     const form = document.getElementById('patientForm');
     const errorLog = document.getElementById('errorLog');
-    const recordsList = document.getElementById('recordsList');
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -280,35 +369,22 @@
 
       if (errors.length > 0) {
         errorLog.style.display = 'block';
-        errorLog.innerHTML = `<strong>Error:</strong> Missing fields: ${errors.join(', ')}.`;
+        errorLog.innerHTML = `<strong>Validation Error:</strong> Missing field(s): ${errors.join(', ')}.`;
         return;
       }
 
       errorLog.style.display = 'none';
 
-      const patientData = {
+      const newRecord = {
         patientId: document.getElementById('patientId').value,
         name,
         dob: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
-        notes
+        notes,
+        timestamp: Date.now()
       };
 
-      // Display Record Card
-      const card = document.createElement('div');
-      card.className = 'record-card';
-      card.innerHTML = `
-        <div class="record-header">
-          <span>${patientData.name}</span>
-          <span class="record-id">${patientData.patientId}</span>
-        </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">DOB: ${patientData.dob}</div>
-        <div style="font-size: 0.9rem;">${patientData.notes}</div>
-      `;
-      recordsList.prepend(card);
-
-      // Increment Auto ID
-      currentIdCount++;
-      document.getElementById('patientId').value = generatePatientId();
+      // Push directly to public cloud sync
+      recordsRef.push(newRecord);
 
       // Reset Inputs
       document.getElementById('patientName').value = '';
