@@ -3,11 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Patient Portal - Sticky Notes</title>
-
-  <!-- Firebase SDKs for Instant Cross-PC Sync -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <title>Patient Portal - Render Sync</title>
 
   <style>
     :root {
@@ -19,18 +15,18 @@
       --accent: #6366f1;
       --accent-glow: rgba(99, 102, 241, 0.35);
       --input-bg: rgba(255, 255, 255, 0.07);
-      --error-color: #f43f5e;
     }
 
+    /* SOFTENED LIGHT THEME - Muted slates and gentle grays */
     [data-theme="light-glass"] {
-      --bg-gradient: linear-gradient(135deg, #e0e7ff, #fae8ff, #fce7f3);
-      --panel-bg: rgba(255, 255, 255, 0.55);
-      --panel-border: rgba(255, 255, 255, 0.7);
-      --text-main: #0f172a;
-      --text-muted: #475569;
+      --bg-gradient: linear-gradient(135deg, #cbd5e1, #e2e8f0, #f1f5f9);
+      --panel-bg: rgba(255, 255, 255, 0.45);
+      --panel-border: rgba(255, 255, 255, 0.5);
+      --text-main: #334155;
+      --text-muted: #64748b;
       --accent: #4f46e5;
-      --accent-glow: rgba(79, 70, 229, 0.25);
-      --input-bg: rgba(255, 255, 255, 0.6);
+      --accent-glow: rgba(79, 70, 229, 0.15);
+      --input-bg: rgba(255, 255, 255, 0.5);
     }
 
     [data-theme="neon-aurora"] {
@@ -60,7 +56,7 @@
       margin: 0;
       padding: 0;
       transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
     }
 
     body {
@@ -82,7 +78,7 @@
       border: 1px solid var(--panel-border);
       border-radius: 24px;
       padding: 32px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
     }
 
     header {
@@ -102,12 +98,6 @@
       cursor: pointer;
     }
 
-    .theme-selector select option {
-      background: #1e1b4b;
-      color: #ffffff;
-    }
-
-    /* Tabs UI */
     .nav-tabs {
       display: flex;
       gap: 12px;
@@ -196,14 +186,9 @@
       padding: 16px;
     }
 
-    .record-header {
-      display: flex;
-      justify-content: space-between;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
     .record-id { color: var(--accent); font-size: 0.85rem; }
+    
+    #loadingMsg { text-align: center; color: var(--text-muted); padding: 20px; }
   </style>
 </head>
 <body>
@@ -212,12 +197,12 @@
     <header>
       <div>
         <h1>Medical Center Portal</h1>
-        <p style="font-size: 0.8rem; color: var(--text-muted)">Live Synchronized Patient Records</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted)">Render Backend Connected</p>
       </div>
       <div class="theme-selector">
         <select id="themeSelect">
           <option value="dark-glass">Dark Glass</option>
-          <option value="light-glass">Light Glass</option>
+          <option value="light-glass">Light Glass (Soft)</option>
           <option value="neon-aurora">Neon Aurora</option>
           <option value="cyberpunk">Cyberpunk</option>
         </select>
@@ -229,19 +214,17 @@
       <button class="tab-btn" onclick="switchTab('view')">View Records</button>
     </div>
 
-    <!-- Tab 1: Add Note -->
+    <!-- Add Note -->
     <div id="addTab" class="tab-content active">
       <form id="patientForm">
         <div class="form-group">
           <label>Patient ID</label>
           <input type="text" id="patientId" readonly />
         </div>
-
         <div class="form-group">
           <label>Patient Name</label>
           <input type="text" id="patientName" placeholder="e.g. Jane Doe" required />
         </div>
-
         <div class="form-group">
           <label>Date of Birth</label>
           <div class="dob-group">
@@ -250,24 +233,26 @@
             <input type="number" id="dobYear" placeholder="YYYY" min="1900" max="2026" required />
           </div>
         </div>
-
         <div class="form-group">
           <label>Clinical Notes</label>
           <textarea id="patientNotes" placeholder="Enter diagnosis or notes..." required></textarea>
         </div>
-
-        <button type="submit" class="btn">Save & Sync Record</button>
+        <button type="submit" class="btn" id="submitBtn">Save Record</button>
       </form>
     </div>
 
-    <!-- Tab 2: View Notes -->
+    <!-- View Notes -->
     <div id="viewTab" class="tab-content">
+      <div id="loadingMsg" style="display:none;">Connecting to Render Server...</div>
       <div class="records-grid" id="recordsGrid"></div>
     </div>
   </div>
 
   <script>
-    // Theme Engine
+    const API_URL = 'https://sticky-notes-back-end.onrender.com/api/notes';
+    let nextId = 101;
+
+    // Theme logic
     const themeSelect = document.getElementById('themeSelect');
     function applyTheme(theme) {
       if (theme === 'dark-glass') document.documentElement.removeAttribute('data-theme');
@@ -275,11 +260,9 @@
       localStorage.setItem('selectedTheme', theme);
     }
     themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
-    const savedTheme = localStorage.getItem('selectedTheme') || 'dark-glass';
-    themeSelect.value = savedTheme;
-    applyTheme(savedTheme);
+    applyTheme(localStorage.getItem('selectedTheme') || 'dark-glass');
+    themeSelect.value = localStorage.getItem('selectedTheme') || 'dark-glass';
 
-    // Tab Switcher
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -290,82 +273,86 @@
       } else {
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         document.getElementById('viewTab').classList.add('active');
+        fetchRecords();
       }
     }
 
-    // Direct Firebase Database Initialization
-    const firebaseConfig = { databaseURL: "https://public-sync-notes-default-rtdb.firebaseio.com/" };
-    firebase.initializeApp(firebaseConfig);
-    const dbRef = firebase.database().ref('patient_notes');
+    async function fetchRecords() {
+      const grid = document.getElementById('recordsGrid');
+      const loading = document.getElementById('loadingMsg');
+      grid.innerHTML = '';
+      loading.style.display = 'block';
 
-    // Smart Auto-filling ID
-    const patientIdInput = document.getElementById('patientId');
-    let nextId = 101;
-    patientIdInput.value = `P-${nextId}`;
+      try {
+        const res = await fetch(API_URL);
+        const records = await res.json();
+        loading.style.display = 'none';
 
-    dbRef.on('value', (snapshot) => {
-      const data = snapshot.val();
-      const recordsGrid = document.getElementById('recordsGrid');
-      recordsGrid.innerHTML = '';
+        if (records.length === 0) {
+          grid.innerHTML = '<p style="color:var(--text-muted)">No records found.</p>';
+          document.getElementById('patientId').value = 'P-101';
+          return;
+        }
 
-      if (data) {
-        const records = Object.values(data);
-        
-        // Compute Next Sequential ID
+        // Calculate next ID
         let highest = 100;
         records.forEach(r => {
           const num = parseInt(r.patientId.replace('P-', ''), 10);
-          if (!isNaN(num) && num > highest) highest = num;
+          if (num > highest) highest = num;
         });
         nextId = highest + 1;
-        patientIdInput.value = `P-${nextId}`;
+        document.getElementById('patientId').value = `P-${nextId}`;
 
-        // Render Cards (Newest First)
-        records.sort((a, b) => b.timestamp - a.timestamp).forEach(r => {
+        // Render
+        records.forEach(r => {
           const card = document.createElement('div');
           card.className = 'record-card';
           card.innerHTML = `
-            <div class="record-header">
+            <div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:6px;">
               <span>${escapeHtml(r.name)}</span>
               <span class="record-id">${escapeHtml(r.patientId)}</span>
             </div>
-            <div style="font-size:0.8rem; color: var(--text-muted); margin-bottom: 8px;">DOB: ${escapeHtml(r.dob)}</div>
-            <div style="font-size:0.9rem; white-space: pre-wrap;">${escapeHtml(r.notes)}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">DOB: ${escapeHtml(r.dob)}</div>
+            <div style="font-size:0.9rem; white-space:pre-wrap;">${escapeHtml(r.notes)}</div>
           `;
-          recordsGrid.appendChild(card);
+          grid.appendChild(card);
         });
-      } else {
-        patientIdInput.value = 'P-101';
-        recordsGrid.innerHTML = '<p style="color:var(--text-muted)">No records found.</p>';
+      } catch (err) {
+        loading.innerHTML = 'Error loading records. Ensure Render is awake.';
       }
-    });
-
-    // Form Submit (Enter-Key Friendly)
-    document.getElementById('patientForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const name = document.getElementById('patientName').value.trim();
-      const month = document.getElementById('dobMonth').value.trim().padStart(2, '0');
-      const day = document.getElementById('dobDay').value.trim().padStart(2, '0');
-      const year = document.getElementById('dobYear').value.trim();
-      const notes = document.getElementById('patientNotes').value.trim();
-
-      dbRef.push({
-        patientId: patientIdInput.value,
-        name,
-        dob: `${month}/${day}/${year}`,
-        notes,
-        timestamp: Date.now()
-      });
-
-      document.getElementById('patientForm').reset();
-      patientIdInput.value = `P-${nextId}`;
-      switchTab('view');
-    });
-
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
     }
+
+    // Init ID on load
+    document.getElementById('patientId').value = `P-${nextId}`;
+    fetchRecords(); // Fetch in background to set correct ID instantly
+
+    document.getElementById('patientForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.innerText = "Saving...";
+      
+      const payload = {
+        patientId: document.getElementById('patientId').value,
+        name: document.getElementById('patientName').value.trim(),
+        dob: `${document.getElementById('dobMonth').value}/${document.getElementById('dobDay').value}/${document.getElementById('dobYear').value}`,
+        notes: document.getElementById('patientNotes').value.trim()
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        document.getElementById('patientForm').reset();
+        switchTab('view');
+      } catch (err) {
+        alert("Failed to save to Render.");
+      }
+      btn.innerText = "Save Record";
+    });
+
+    function escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]); }
   </script>
 </body>
 </html>
