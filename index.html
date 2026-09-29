@@ -1,410 +1,323 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Patient Management System</title>
-  
-  <!-- Firebase SDKs for Real-Time Global Sync -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sticky Notes App</title>
   <style>
     :root {
-      --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
-      --panel-bg: rgba(255, 255, 255, 0.05);
-      --panel-border: rgba(255, 255, 255, 0.12);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent: #6366f1;
-      --accent-glow: rgba(99, 102, 241, 0.35);
-      --input-bg: rgba(255, 255, 255, 0.07);
-      --error-color: #f43f5e;
-    }
-
-    [data-theme="light-glass"] {
-      --bg-gradient: linear-gradient(135deg, #e0e7ff, #fae8ff, #fce7f3);
-      --panel-bg: rgba(255, 255, 255, 0.55);
-      --panel-border: rgba(255, 255, 255, 0.7);
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --accent: #4f46e5;
-      --accent-glow: rgba(79, 70, 229, 0.25);
-      --input-bg: rgba(255, 255, 255, 0.6);
-    }
-
-    [data-theme="neon-aurora"] {
-      --bg-gradient: linear-gradient(135deg, #030712, #064e3b, #022c22);
-      --panel-bg: rgba(16, 185, 129, 0.08);
-      --panel-border: rgba(52, 211, 153, 0.25);
-      --text-main: #ecfdf5;
-      --text-muted: #6ee7b7;
-      --accent: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.4);
-      --input-bg: rgba(6, 78, 59, 0.3);
-    }
-
-    [data-theme="cyberpunk"] {
-      --bg-gradient: linear-gradient(135deg, #180828, #2a0845, #4a0040);
-      --panel-bg: rgba(236, 72, 153, 0.1);
-      --panel-border: rgba(244, 114, 182, 0.35);
-      --text-main: #fdf2f8;
-      --text-muted: #f472b6;
-      --accent: #f43f5e;
-      --accent-glow: rgba(244, 63, 94, 0.5);
-      --input-bg: rgba(88, 28, 135, 0.3);
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --border: #e5e7eb;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
     }
 
     body {
-      min-height: 100vh;
-      background: var(--bg-gradient);
-      color: var(--text-main);
+      background-color: var(--bg);
+      color: var(--text);
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 20px;
+      padding: 2rem 1rem;
+      min-height: 100vh;
     }
 
-    .glass-container {
+    .container {
       width: 100%;
-      max-width: 900px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border);
-      border-radius: 24px;
-      padding: 32px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      max-width: 800px;
     }
 
     header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    /* Tabs UI */
+    .tabs {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.5rem;
     }
 
-    .theme-selector select {
-      background: var(--input-bg);
-      color: var(--text-main);
-      border: 1px solid var(--panel-border);
-      padding: 10px 16px;
-      border-radius: 12px;
-      outline: none;
+    .tab-btn {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-light);
       cursor: pointer;
-      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
 
-    .theme-selector select option {
-      background: #1e1b4b;
-      color: #ffffff;
+    .tab-btn:hover {
+      background: #e5e7eb;
     }
 
-    .grid-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
+    .tab-btn.active {
+      color: var(--primary);
+      background: #eff6ff;
     }
 
-    @media (max-width: 768px) {
-      .grid-layout { grid-template-columns: 1fr; }
+    /* Tab Content Views */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
     }
 
-    .form-group { margin-bottom: 16px; }
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Form Styles */
+    .form-card {
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
 
     label {
       display: block;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
     }
 
     input, textarea {
       width: 100%;
-      padding: 12px 16px;
-      background: var(--input-bg);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      color: var(--text-main);
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       outline: none;
+      font-size: 1rem;
+      transition: border-color 0.2s;
     }
 
     input:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-
-    .dob-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
     textarea {
       resize: vertical;
-      min-height: 100px;
+      min-height: 120px;
     }
 
-    .btn {
-      width: 100%;
-      padding: 12px;
-      background: var(--accent);
-      color: #fff;
+    button.submit-btn {
+      background: var(--primary);
+      color: white;
       border: none;
-      border-radius: 12px;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
     }
 
-    .error-log {
-      margin-top: 16px;
-      padding: 12px;
+    button.submit-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Grid Styles */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .note-card {
+      background: var(--card-bg);
+      padding: 1.5rem;
       border-radius: 12px;
-      background: rgba(244, 63, 94, 0.1);
-      border: 1px solid var(--error-color);
-      color: var(--error-color);
-      font-size: 0.85rem;
-      display: none;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border-top: 4px solid var(--primary);
     }
 
-    .records-list {
-      max-height: 400px;
-      overflow-y: auto;
+    .note-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.25rem;
     }
 
-    .record-card {
-      background: var(--input-bg);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
+    .note-card p {
+      color: var(--text-light);
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      margin-bottom: 1rem;
     }
 
-    .record-header {
-      display: flex;
-      justify-content: space-between;
-      font-weight: 600;
-      margin-bottom: 6px;
+    .note-date {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: right;
     }
 
-    .record-id {
-      color: var(--accent);
-      font-size: 0.85rem;
-    }
-
-    .sync-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 4px;
+    #loadingMsg {
+      text-align: center;
+      color: var(--text-light);
     }
   </style>
 </head>
 <body>
 
-  <div class="glass-container">
+  <div class="container">
     <header>
-      <div>
-        <h1>Patient Records</h1>
-        <div class="sync-status" id="syncStatus">Live Global Sync Active</div>
-      </div>
-      <div class="theme-selector">
-        <select id="themeSelect">
-          <option value="dark-glass">Dark Glass</option>
-          <option value="light-glass">Light Glass</option>
-          <option value="neon-aurora">Neon Aurora</option>
-          <option value="cyberpunk">Cyberpunk</option>
-        </select>
-      </div>
+      <h1>Sticky Notes</h1>
     </header>
 
-    <div class="grid-layout">
-      <div>
-        <form id="patientForm" novalidate>
-          <div class="form-group">
-            <label>Patient ID</label>
-            <input type="text" id="patientId" readonly />
-          </div>
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('add')">Add Note</button>
+      <button class="tab-btn" onclick="switchTab('view')">View Notes</button>
+    </div>
 
+    <!-- Add Note Tab -->
+    <div id="addTab" class="tab-content active">
+      <div class="form-card">
+        <form id="noteForm">
           <div class="form-group">
-            <label>Patient Name</label>
-            <input type="text" id="patientName" placeholder="John Doe" />
+            <label for="title">Note Title</label>
+            <input type="text" id="title" placeholder="Enter title..." required>
           </div>
-
           <div class="form-group">
-            <label>Date of Birth</label>
-            <div class="dob-group">
-              <input type="number" id="dobMonth" placeholder="MM" min="1" max="12" />
-              <input type="number" id="dobDay" placeholder="DD" min="1" max="31" />
-              <input type="number" id="dobYear" placeholder="YYYY" min="1900" max="2026" />
-            </div>
+            <label for="content">Note Content</label>
+            <textarea id="content" placeholder="Type your note here..." required></textarea>
           </div>
-
-          <div class="form-group">
-            <label>Notes</label>
-            <textarea id="patientNotes" placeholder="Enter clinical notes..."></textarea>
-          </div>
-
-          <button type="submit" class="btn" id="submitBtn">Publish Record Globally</button>
+          <button type="submit" class="submit-btn">Save Note</button>
         </form>
-
-        <div class="error-log" id="errorLog"></div>
       </div>
+    </div>
 
-      <div>
-        <h2>Live Shared Records</h2>
-        <br />
-        <div class="records-list" id="recordsList"></div>
-      </div>
+    <!-- View Notes Tab -->
+    <div id="viewTab" class="tab-content">
+      <div id="loadingMsg">Loading notes...</div>
+      <div class="notes-grid" id="notesGrid"></div>
     </div>
   </div>
 
   <script>
-    // --- 1. THEME SWITCHER LOGIC ---
-    const themeSelect = document.getElementById('themeSelect');
-    
-    function applyTheme(themeName) {
-      if (themeName === 'dark-glass') {
-        document.documentElement.removeAttribute('data-theme');
-      } else {
-        document.documentElement.setAttribute('data-theme', themeName);
-      }
-      localStorage.setItem('selectedTheme', themeName);
-    }
+    // Point this to your Render backend URL
+    const API_URL = 'https://sticky-notes-back-end.onrender.com/api/notes';
 
-    themeSelect.addEventListener('change', (e) => {
-      applyTheme(e.target.value);
-    });
+    // Tab Switching Logic
+    function switchTab(tabName) {
+      // Update Buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
 
-    const savedTheme = localStorage.getItem('selectedTheme') || 'dark-glass';
-    themeSelect.value = savedTheme;
-    applyTheme(savedTheme);
-
-
-    // --- 2. GLOBAL SYNC INITIALIZATION ---
-    const firebaseConfig = {
-      databaseURL: "https://public-sync-notes-default-rtdb.firebaseio.com/"
-    };
-    
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const recordsRef = database.ref('shared_patient_records');
-
-
-    // --- 3. PATIENT ID AUTO-FILL (IMMEDIATE INITIALIZATION) ---
-    let currentIdCount = 101;
-    function updatePatientIdDisplay() {
-      document.getElementById('patientId').value = `P-${currentIdCount}`;
-    }
-    // Set immediate default on load
-    updatePatientIdDisplay();
-
-
-    // --- 4. REAL-TIME DATA SYNC LISTENER ---
-    const recordsList = document.getElementById('recordsList');
-
-    recordsRef.on('value', (snapshot) => {
-      recordsList.innerHTML = '';
-      const data = snapshot.val();
+      // Update Content Views
+      document.getElementById('addTab').classList.remove('active');
+      document.getElementById('viewTab').classList.remove('active');
       
-      if (data) {
-        const recordsArray = Object.values(data);
-        recordsArray.sort((a, b) => b.timestamp - a.timestamp);
-        
-        recordsArray.forEach(renderRecordCard);
-        
-        // Auto-increment ID based on highest existing record count
-        currentIdCount = 101 + recordsArray.length;
+      if (tabName === 'add') {
+        document.getElementById('addTab').classList.add('active');
       } else {
-        currentIdCount = 101;
+        document.getElementById('viewTab').classList.add('active');
+        fetchNotes(); // Auto-refresh notes when switching to the View tab
       }
-      
-      updatePatientIdDisplay();
-    });
-
-    function renderRecordCard(patientData) {
-      const card = document.createElement('div');
-      card.className = 'record-card';
-      card.innerHTML = `
-        <div class="record-header">
-          <span>${escapeHtml(patientData.name)}</span>
-          <span class="record-id">${escapeHtml(patientData.patientId)}</span>
-        </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">DOB: ${escapeHtml(patientData.dob)}</div>
-        <div style="font-size: 0.9rem;">${escapeHtml(patientData.notes)}</div>
-      `;
-      recordsList.appendChild(card);
     }
 
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, (m) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-      })[m]);
-    }
-
-
-    // --- 5. FORM SUBMISSION & ENTER KEY FIX ---
-    const form = document.getElementById('patientForm');
-    const errorLog = document.getElementById('errorLog');
-
-    function handleFormSubmit() {
-      const name = document.getElementById('patientName').value.trim();
-      const month = document.getElementById('dobMonth').value.trim();
-      const day = document.getElementById('dobDay').value.trim();
-      const year = document.getElementById('dobYear').value.trim();
-      const notes = document.getElementById('patientNotes').value.trim();
-
-      let errors = [];
-      if (!name) errors.push('Patient Name');
-      if (!month || !day || !year) errors.push('Complete Date of Birth');
-      if (!notes) errors.push('Notes');
-
-      if (errors.length > 0) {
-        errorLog.style.display = 'block';
-        errorLog.innerHTML = `<strong>Validation Error:</strong> Missing field(s): ${errors.join(', ')}.`;
-        return;
-      }
-
-      errorLog.style.display = 'none';
-
-      const newRecord = {
-        patientId: document.getElementById('patientId').value,
-        name,
-        dob: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
-        notes,
-        timestamp: Date.now()
-      };
-
-      recordsRef.push(newRecord);
-
-      // Reset Inputs
-      document.getElementById('patientName').value = '';
-      document.getElementById('dobMonth').value = '';
-      document.getElementById('dobDay').value = '';
-      document.getElementById('dobYear').value = '';
-      document.getElementById('patientNotes').value = '';
-    }
-
-    // Direct Form Submit Event (Triggers on Enter inside any text input)
-    form.addEventListener('submit', (e) => {
+    // Submit New Note
+    document.getElementById('noteForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      handleFormSubmit();
-    });
+      
+      const submitBtn = document.querySelector('.submit-btn');
+      submitBtn.innerText = 'Saving...';
+      submitBtn.disabled = true;
 
-    // Explicit Enter-key listener for fields and textarea
-    form.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleFormSubmit();
+      const title = document.getElementById('title').value;
+      const content = document.getElementById('content').value;
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+
+        if (response.ok) {
+          // Reset form and switch to view tab
+          document.getElementById('noteForm').reset();
+          switchTab('view');
+          
+          // Manually update tab UI states since we called switchTab programmatically
+          document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+          document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        } else {
+          alert('Failed to save note.');
+        }
+      } catch (error) {
+        console.error('Error saving note:', error);
+        alert('Could not connect to the server. Is your Render instance awake?');
+      } finally {
+        submitBtn.innerText = 'Save Note';
+        submitBtn.disabled = false;
       }
     });
+
+    // Fetch and Display Notes
+    async function fetchNotes() {
+      const grid = document.getElementById('notesGrid');
+      const loading = document.getElementById('loadingMsg');
+      
+      grid.innerHTML = '';
+      loading.style.display = 'block';
+
+      try {
+        const response = await fetch(API_URL);
+        const notes = await response.json();
+        
+        loading.style.display = 'none';
+
+        if (notes.length === 0) {
+          grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #6b7280;">No notes found. Go add one!</p>';
+          return;
+        }
+
+        notes.forEach(note => {
+          const card = document.createElement('div');
+          card.className = 'note-card';
+          card.innerHTML = `
+            <h3>${escapeHTML(note.title)}</h3>
+            <p>${escapeHTML(note.content)}</p>
+            <div class="note-date">${note.timestamp}</div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Error fetching notes:', error);
+        loading.innerHTML = 'Failed to load notes. Please check your backend connection.';
+      }
+    }
+
+    // Utility to prevent XSS attacks when displaying data
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.innerText = str;
+      return div.innerHTML;
+    }
   </script>
 </body>
 </html>
