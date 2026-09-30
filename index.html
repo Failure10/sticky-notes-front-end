@@ -3,60 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Patient Portal - Render Sync</title>
+  <title>Patient Portal - Clean UI & Settings</title>
+
+  <!-- Google Fonts for Typography Settings -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
   <style>
+    /* CORE THEMES */
     :root {
       --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
-      --panel-bg: rgba(255, 255, 255, 0.05);
+      --panel-bg: rgba(15, 23, 42, 0.65);
       --panel-border: rgba(255, 255, 255, 0.12);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --accent: #6366f1;
       --accent-glow: rgba(99, 102, 241, 0.35);
-      --input-bg: rgba(255, 255, 255, 0.07);
+      --input-bg: rgba(255, 255, 255, 0.06);
+      --select-popup-bg: #1e1b4b;
+      --particle-color: rgba(255, 255, 255, 0.35);
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* SOFTENED LIGHT THEME - Muted slates and gentle grays */
+    /* SOFTENED LIGHT THEME (Non-glare) */
     [data-theme="light-glass"] {
       --bg-gradient: linear-gradient(135deg, #cbd5e1, #e2e8f0, #f1f5f9);
-      --panel-bg: rgba(255, 255, 255, 0.45);
-      --panel-border: rgba(255, 255, 255, 0.5);
+      --panel-bg: rgba(255, 255, 255, 0.6);
+      --panel-border: rgba(255, 255, 255, 0.8);
       --text-main: #334155;
       --text-muted: #64748b;
       --accent: #4f46e5;
       --accent-glow: rgba(79, 70, 229, 0.15);
-      --input-bg: rgba(255, 255, 255, 0.5);
+      --input-bg: rgba(255, 255, 255, 0.65);
+      --select-popup-bg: #e2e8f0;
+      --particle-color: rgba(71, 85, 105, 0.3);
     }
 
     [data-theme="neon-aurora"] {
       --bg-gradient: linear-gradient(135deg, #030712, #064e3b, #022c22);
-      --panel-bg: rgba(16, 185, 129, 0.08);
+      --panel-bg: rgba(6, 78, 59, 0.35);
       --panel-border: rgba(52, 211, 153, 0.25);
       --text-main: #ecfdf5;
       --text-muted: #6ee7b7;
       --accent: #10b981;
       --accent-glow: rgba(16, 185, 129, 0.4);
-      --input-bg: rgba(6, 78, 59, 0.3);
+      --input-bg: rgba(6, 78, 59, 0.4);
+      --select-popup-bg: #064e3b;
+      --particle-color: rgba(52, 211, 153, 0.4);
     }
 
     [data-theme="cyberpunk"] {
       --bg-gradient: linear-gradient(135deg, #180828, #2a0845, #4a0040);
-      --panel-bg: rgba(236, 72, 153, 0.1);
+      --panel-bg: rgba(88, 28, 135, 0.35);
       --panel-border: rgba(244, 114, 182, 0.35);
       --text-main: #fdf2f8;
       --text-muted: #f472b6;
       --accent: #f43f5e;
       --accent-glow: rgba(244, 63, 94, 0.5);
-      --input-bg: rgba(88, 28, 135, 0.3);
+      --input-bg: rgba(88, 28, 135, 0.4);
+      --select-popup-bg: #2a0845;
+      --particle-color: rgba(244, 114, 182, 0.4);
+    }
+
+    /* FONT VARIANTS */
+    [data-font="inter"] { --font-family: 'Inter', system-ui, sans-serif; }
+    [data-font="system"] { --font-family: system-ui, -apple-system, sans-serif; }
+    [data-font="serif"] { --font-family: 'Merriweather', Georgia, serif; }
+    [data-font="mono"] { --font-family: 'Fira Code', monospace; }
+
+    /* ANIMATION CONTROL CLASS */
+    body.disable-animations * {
+      transition: none !important;
+      animation: none !important;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: var(--font-family);
+      transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
     }
 
     body {
@@ -67,18 +94,34 @@
       justify-content: center;
       align-items: center;
       padding: 20px;
+      overflow-x: hidden;
+      position: relative;
     }
 
+    /* BACKGROUND CANVAS FOR PARTICLES */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* GLASS CONTAINER */
     .glass-container {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 800px;
+      max-width: 820px;
       background: var(--panel-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--panel-border);
       border-radius: 24px;
       padding: 32px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
     }
 
     header {
@@ -88,19 +131,29 @@
       margin-bottom: 24px;
     }
 
-    .theme-selector select {
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
       background: var(--input-bg);
-      color: var(--text-main);
       border: 1px solid var(--panel-border);
-      padding: 10px 16px;
-      border-radius: 12px;
-      outline: none;
-      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
     }
 
     .nav-tabs {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       margin-bottom: 24px;
       border-bottom: 1px solid var(--panel-border);
       padding-bottom: 12px;
@@ -108,34 +161,42 @@
 
     .tab-btn {
       background: transparent;
-      border: none;
+      border: 1px solid transparent;
       color: var(--text-muted);
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 10px;
+      padding: 10px 18px;
+      border-radius: 12px;
       cursor: pointer;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .tab-btn.active {
       color: var(--text-main);
       background: var(--input-bg);
-      border: 1px solid var(--panel-border);
+      border-color: var(--panel-border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .form-group { margin-bottom: 16px; }
+    /* FORMS & INPUTS */
+    .form-group { margin-bottom: 18px; }
 
     label {
       display: block;
       font-size: 0.85rem;
+      font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 12px 16px;
       background: var(--input-bg);
@@ -143,78 +204,188 @@
       border-radius: 12px;
       color: var(--text-main);
       outline: none;
+      font-size: 0.95rem;
     }
 
-    input:focus, textarea:focus {
+    /* DROPDOWN VISIBILITY FIX */
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      background-size: 16px;
+      padding-right: 40px;
+      cursor: pointer;
+    }
+
+    /* Target specific dropdown list elements across browsers */
+    select option {
+      background-color: var(--select-popup-bg);
+      color: var(--text-main);
+      padding: 10px;
+    }
+
+    input:focus, textarea:focus, select:focus {
       border-color: var(--accent);
       box-shadow: 0 0 12px var(--accent-glow);
     }
 
-    input[readonly] { opacity: 0.7; cursor: not-allowed; }
+    input[readonly] { opacity: 0.75; cursor: not-allowed; }
 
     .dob-group {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
     }
 
-    textarea { resize: vertical; min-height: 100px; }
+    textarea { resize: vertical; min-height: 110px; }
 
     .btn {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background: var(--accent);
       color: #fff;
       border: none;
       border-radius: 12px;
       font-weight: 600;
+      font-size: 1rem;
       cursor: pointer;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
     }
 
     .records-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 16px;
-      max-height: 450px;
+      max-height: 440px;
       overflow-y: auto;
+      padding-right: 4px;
     }
 
     .record-card {
       background: var(--input-bg);
       border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 18px;
     }
 
-    .record-id { color: var(--accent); font-size: 0.85rem; }
-    
+    .record-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .record-id { color: var(--accent); font-weight: 700; font-size: 0.85rem; }
+
+    /* SETTINGS TAB GRID */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .settings-card {
+      background: var(--input-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .settings-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-card p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* TOGGLE SWITCHES */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .toggle-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 24px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--panel-border);
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    /* CUSTOM SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 10px; }
+
     #loadingMsg { text-align: center; color: var(--text-muted); padding: 20px; }
   </style>
 </head>
 <body>
 
+  <!-- Background Particle Canvas -->
+  <canvas id="particleCanvas"></canvas>
+
   <div class="glass-container">
     <header>
       <div>
-        <h1>Medical Center Portal</h1>
-        <p style="font-size: 0.8rem; color: var(--text-muted)">Render Backend Connected</p>
+        <h1 style="font-size: 1.6rem; font-weight: 700;">Medical Center Portal</h1>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">Render Backend Connected</p>
       </div>
-      <div class="theme-selector">
-        <select id="themeSelect">
-          <option value="dark-glass">Dark Glass</option>
-          <option value="light-glass">Light Glass (Soft)</option>
-          <option value="neon-aurora">Neon Aurora</option>
-          <option value="cyberpunk">Cyberpunk</option>
-        </select>
+      <div class="badge">
+        <span class="badge-dot"></span> System Live
       </div>
     </header>
 
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('add')">Add Patient Note</button>
+      <button class="tab-btn active" onclick="switchTab('add')">Add Record</button>
       <button class="tab-btn" onclick="switchTab('view')">View Records</button>
+      <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
 
-    <!-- Add Note -->
+    <!-- TAB 1: ADD RECORD -->
     <div id="addTab" class="tab-content active">
       <form id="patientForm">
         <div class="form-group">
@@ -235,34 +406,96 @@
         </div>
         <div class="form-group">
           <label>Clinical Notes</label>
-          <textarea id="patientNotes" placeholder="Enter diagnosis or notes..." required></textarea>
+          <textarea id="patientNotes" placeholder="Enter clinical notes..." required></textarea>
         </div>
         <button type="submit" class="btn" id="submitBtn">Save Record</button>
       </form>
     </div>
 
-    <!-- View Notes -->
+    <!-- TAB 2: VIEW RECORDS -->
     <div id="viewTab" class="tab-content">
-      <div id="loadingMsg" style="display:none;">Connecting to Render Server...</div>
+      <div id="loadingMsg">Connecting to Render Server...</div>
       <div class="records-grid" id="recordsGrid"></div>
     </div>
+
+    <!-- TAB 3: SETTINGS -->
+    <div id="settingsTab" class="tab-content">
+      <div class="settings-grid">
+        
+        <!-- Theme Setting -->
+        <div class="settings-card">
+          <h3>🎨 Theme & Color</h3>
+          <p>Choose visual palette for the entire interface.</p>
+          <div class="form-group">
+            <label for="themeSelect">Active Theme</label>
+            <select id="themeSelect">
+              <option value="dark-glass">Dark Glass (Default)</option>
+              <option value="light-glass">Light Glass (Soft & Eye-Friendly)</option>
+              <option value="neon-aurora">Neon Aurora</option>
+              <option value="cyberpunk">Cyberpunk Midnight</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Typography Setting -->
+        <div class="settings-card">
+          <h3>🔤 Typography & Font</h3>
+          <p>Select your preferred text font family.</p>
+          <div class="form-group">
+            <label for="fontSelect">Font Style</label>
+            <select id="fontSelect">
+              <option value="inter">Inter (Modern Clean)</option>
+              <option value="system">System UI (Default Native)</option>
+              <option value="serif">Merriweather (Classic Serif)</option>
+              <option value="mono">Fira Code (Developer Mono)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Particles Setting -->
+        <div class="settings-card">
+          <h3>✨ Background Particles</h3>
+          <p>Control interactive canvas particle background effect.</p>
+          <div class="toggle-row">
+            <span class="toggle-label">Enable Particles</span>
+            <label class="switch">
+              <input type="checkbox" id="particleToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="form-group" style="margin-top: 14px;">
+            <label for="particleDensity">Particle Density</label>
+            <select id="particleDensity">
+              <option value="30">Low (30)</option>
+              <option value="60" selected>Medium (60)</option>
+              <option value="110">High (110)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Animation Setting -->
+        <div class="settings-card">
+          <h3>⚡ Interface Animations</h3>
+          <p>Toggle transitions, tab shifts, and smooth hover effects.</p>
+          <div class="toggle-row">
+            <span class="toggle-label">UI Animations</span>
+            <label class="switch">
+              <input type="checkbox" id="animToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <script>
     const API_URL = 'https://sticky-notes-back-end.onrender.com/api/notes';
     let nextId = 101;
 
-    // Theme logic
-    const themeSelect = document.getElementById('themeSelect');
-    function applyTheme(theme) {
-      if (theme === 'dark-glass') document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('selectedTheme', theme);
-    }
-    themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
-    applyTheme(localStorage.getItem('selectedTheme') || 'dark-glass');
-    themeSelect.value = localStorage.getItem('selectedTheme') || 'dark-glass';
-
+    // --- 1. TAB SWITCHING ---
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -270,13 +503,147 @@
       if (tab === 'add') {
         document.querySelectorAll('.tab-btn')[0].classList.add('active');
         document.getElementById('addTab').classList.add('active');
-      } else {
+      } else if (tab === 'view') {
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         document.getElementById('viewTab').classList.add('active');
         fetchRecords();
+      } else if (tab === 'settings') {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('settingsTab').classList.add('active');
       }
     }
 
+    // --- 2. THEME CONTROLLER ---
+    const themeSelect = document.getElementById('themeSelect');
+    function applyTheme(theme) {
+      if (theme === 'dark-glass') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      localStorage.setItem('selectedTheme', theme);
+    }
+    themeSelect.addEventListener('change', (e) => applyTheme(e.target.value));
+
+    // Initialize Theme
+    const savedTheme = localStorage.getItem('selectedTheme') || 'dark-glass';
+    applyTheme(savedTheme);
+    themeSelect.value = savedTheme;
+
+    // --- 3. FONT CONTROLLER ---
+    const fontSelect = document.getElementById('fontSelect');
+    function applyFont(font) {
+      document.documentElement.setAttribute('data-font', font);
+      localStorage.setItem('selectedFont', font);
+    }
+    fontSelect.addEventListener('change', (e) => applyFont(e.target.value));
+
+    // Initialize Font
+    const savedFont = localStorage.getItem('selectedFont') || 'inter';
+    applyFont(savedFont);
+    fontSelect.value = savedFont;
+
+    // --- 4. ANIMATION CONTROLLER ---
+    const animToggle = document.getElementById('animToggle');
+    function applyAnimations(enabled) {
+      if (!enabled) {
+        document.body.classList.add('disable-animations');
+      } else {
+        document.body.classList.remove('disable-animations');
+      }
+      localStorage.setItem('animationsEnabled', enabled);
+    }
+    animToggle.addEventListener('change', (e) => applyAnimations(e.target.checked));
+
+    // Initialize Animations
+    const savedAnim = localStorage.getItem('animationsEnabled') !== 'false';
+    animToggle.checked = savedAnim;
+    applyAnimations(savedAnim);
+
+    // --- 5. PARTICLE SYSTEM ENGINE ---
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particlesArray = [];
+    let particlesEnabled = true;
+    let particleCount = 60;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2.5 + 1;
+        this.speedX = (Math.random() - 0.5) * 0.6;
+        this.speedY = (Math.random() - 0.5) * 0.6;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0) this.x = canvas.width;
+        if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        if (this.y > canvas.height) this.y = 0;
+      }
+      draw() {
+        const computedStyle = getComputedStyle(document.documentElement);
+        ctx.fillStyle = computedStyle.getPropertyValue('--particle-color').trim() || 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      particlesArray = [];
+      if (!particlesEnabled) return;
+      for (let i = 0; i < particleCount; i++) {
+        particlesArray.push(new Particle());
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (particlesEnabled) {
+        for (let i = 0; i < particlesArray.length; i++) {
+          particlesArray[i].update();
+          particlesArray[i].draw();
+        }
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // Particle Controls
+    const particleToggle = document.getElementById('particleToggle');
+    const particleDensity = document.getElementById('particleDensity');
+
+    particleToggle.addEventListener('change', (e) => {
+      particlesEnabled = e.target.checked;
+      localStorage.setItem('particlesEnabled', particlesEnabled);
+      initParticles();
+    });
+
+    particleDensity.addEventListener('change', (e) => {
+      particleCount = parseInt(e.target.value, 10);
+      localStorage.setItem('particleCount', particleCount);
+      initParticles();
+    });
+
+    // Initialize Particles from Storage
+    particlesEnabled = localStorage.getItem('particlesEnabled') !== 'false';
+    particleCount = parseInt(localStorage.getItem('particleCount') || '60', 10);
+    particleToggle.checked = particlesEnabled;
+    particleDensity.value = particleCount.toString();
+    initParticles();
+
+    // --- 6. DATA FETCH & API ---
     async function fetchRecords() {
       const grid = document.getElementById('recordsGrid');
       const loading = document.getElementById('loadingMsg');
@@ -289,12 +656,11 @@
         loading.style.display = 'none';
 
         if (records.length === 0) {
-          grid.innerHTML = '<p style="color:var(--text-muted)">No records found.</p>';
+          grid.innerHTML = '<p style="color:var(--text-muted); grid-column: 1/-1; text-align:center;">No records found.</p>';
           document.getElementById('patientId').value = 'P-101';
           return;
         }
 
-        // Calculate next ID
         let highest = 100;
         records.forEach(r => {
           const num = parseInt(r.patientId.replace('P-', ''), 10);
@@ -303,7 +669,6 @@
         nextId = highest + 1;
         document.getElementById('patientId').value = `P-${nextId}`;
 
-        // Render
         records.forEach(r => {
           const card = document.createElement('div');
           card.className = 'record-card';
@@ -313,19 +678,20 @@
               <span class="record-id">${escapeHtml(r.patientId)}</span>
             </div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">DOB: ${escapeHtml(r.dob)}</div>
-            <div style="font-size:0.9rem; white-space:pre-wrap;">${escapeHtml(r.notes)}</div>
+            <div style="font-size:0.9rem; white-space:pre-wrap; color:var(--text-main);">${escapeHtml(r.notes)}</div>
           `;
           grid.appendChild(card);
         });
       } catch (err) {
-        loading.innerHTML = 'Error loading records. Ensure Render is awake.';
+        loading.innerHTML = 'Error loading records. Ensure Render server is active.';
       }
     }
 
-    // Init ID on load
+    // Init Patient ID on initial load
     document.getElementById('patientId').value = `P-${nextId}`;
-    fetchRecords(); // Fetch in background to set correct ID instantly
+    fetchRecords();
 
+    // Form Submit Listener
     document.getElementById('patientForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -347,12 +713,14 @@
         document.getElementById('patientForm').reset();
         switchTab('view');
       } catch (err) {
-        alert("Failed to save to Render.");
+        alert("Failed to save record to Render server.");
       }
       btn.innerText = "Save Record";
     });
 
-    function escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]); }
+    function escapeHtml(str) { 
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]); 
+    }
   </script>
 </body>
 </html>
