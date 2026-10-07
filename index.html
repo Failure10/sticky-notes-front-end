@@ -164,6 +164,16 @@ details.adv[open] summary::after{transform:rotate(-135deg);margin-top:3px}
 .add{padding:10px 14px;margin-bottom:8px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:calc(var(--radius) * .4);background:var(--field)}
 .add small{display:block;font-size:.7rem;color:var(--muted);margin-bottom:3px}
 .add p{font-size:.88rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.tools{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.tools .in{flex:1 1 160px;padding:9px 12px;font-size:.88rem}
+.tools .seg button{padding:6px 10px}
+.btn.sm{padding:9px 14px;font-size:.82rem}
+.btn.danger{background:#f87171;color:#2a0707;box-shadow:0 6px 20px rgba(248,113,113,.3)}
+.btn.danger:disabled{opacity:.35;cursor:not-allowed;filter:none}
+.rec.done{opacity:.6}
+.rec.done .rec-name{text-decoration:line-through}
+.m-actions{margin-top:16px}
+@media(prefers-reduced-motion:reduce){body{animation:none}*,*::before{transition-duration:.01ms!important}}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
 @media(max-width:560px){:root{--pad:20px}.row{grid-template-columns:1fr 1fr}.row .in:last-child{grid-column:1/-1}.tab{font-size:.82rem;padding:9px 6px}input[type=range]{width:110px}}
 </style>
@@ -218,6 +228,11 @@ details.adv[open] summary::after{transform:rotate(-135deg);margin-top:3px}
     </div>
 
     <div class="pane" id="p-view">
+      <div class="tools">
+        <input class="in" id="q" type="search" placeholder="Search name, ID or notes" aria-label="Search records" autocomplete="off">
+        <div class="seg" data-s="filter"><button data-v="all">All</button><button data-v="open">Open</button><button data-v="done">Resolved</button></div>
+        <button class="btn danger sm" id="clearDone" type="button" disabled>Clear resolved</button>
+      </div>
       <div class="recs" id="recs"></div>
     </div>
 
@@ -282,6 +297,7 @@ details.adv[open] summary::after{transform:rotate(-135deg);margin-top:3px}
       <div><small>Date of birth</small><span id="mDob"></span></div>
     </div>
     <div class="m-notes" id="mNotes"></div>
+    <div class="m-actions"><button class="btn ghost full" id="mResolve" type="button">Mark resolved</button></div>
     <div class="m-add">
       <div class="lbl" style="margin-top:16px">Additional info</div>
       <div id="mAdd"></div>
@@ -290,11 +306,11 @@ details.adv[open] summary::after{transform:rotate(-135deg);margin-top:3px}
     </div>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const API_URL='https://sticky-notes-back-end.onrender.com/api/notes';
-const EGG_TEXT='Liam goons to gay midget femboys';
+const EGG_TEXT='Wishing you a speedy recovery';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const html=document.documentElement;
@@ -303,7 +319,7 @@ $('egg').textContent=EGG_TEXT;
 /* ---------- settings ---------- */
 const THEMES={midnight:['#0a0e1a','#6d7cff','Midnight'],daylight:['#e6ebf4','#4f5bd5','Daylight'],aurora:['#03110d','#2dd4a0','Aurora'],neon:['#12041f','#f0509b','Neon'],ocean:['#05182a','#38bdf8','Ocean'],sunset:['#2a0a14','#fb7a52','Sunset'],terminal:['#000000','#3ddc84','Terminal']};
 const ACCENTS=['#6d7cff','#a78bfa','#2dd4a0','#f0509b','#fbbf24','#38bdf8'];
-const DEF={theme:'midnight',accent:'',font:'inter',size:100,radius:20,blur:24,opacity:70,density:'comfy',layout:'grid',sort:'new',anim:true,motion:true,particles:true,count:60,links:true};
+const DEF={theme:'midnight',accent:'',font:'inter',size:100,radius:20,blur:24,opacity:70,density:'comfy',layout:'grid',sort:'new',filter:'all',anim:true,motion:true,particles:true,count:60,links:true};
 let S={...DEF};
 try{Object.assign(S,JSON.parse(localStorage.getItem('pp-settings')||'{}'))}catch(e){}
 $('themes').innerHTML=Object.entries(THEMES).map(([k,v])=>`<button type="button" class="sw" data-v="${k}"><i style="background:${v[0]};--c:${v[1]}"></i><span>${v[2]}</span></button>`).join('');
@@ -354,12 +370,15 @@ function nextId(){let m=100;records.forEach(r=>{m=Math.max(m,idNum(r))});return 
 function setStatus(s,t){$('status').dataset.s=s;$('status').lastChild.textContent=t}
 function renderRecords(){
   const el=$('recs');
-  let list=records.map((r,i)=>({r,i}));
+  const q=$('q').value.trim().toLowerCase();
+  let list=records.map((r,i)=>({r,i})).filter(({r})=>(S.filter==='all'||(S.filter==='done')===!!r.resolved)&&(!q||[r.name,r.patientId,r.notes].join(' ').toLowerCase().includes(q)));
+  const nd=records.filter(r=>r.resolved).length;
+  $('clearDone').disabled=!nd;$('clearDone').textContent=nd?`Clear resolved (${nd})`:'Clear resolved';
   if(S.sort==='new')list.sort((a,b)=>idNum(b.r)-idNum(a.r));
   else if(S.sort==='old')list.sort((a,b)=>idNum(a.r)-idNum(b.r));
   else list.sort((a,b)=>String(a.r.name||'').localeCompare(String(b.r.name||'')));
-  if(!list.length){el.innerHTML='<div class="empty">No records yet.</div>';return}
-  el.innerHTML=list.map(({r,i})=>`<button class="rec" data-i="${i}"><div class="rec-top"><span class="rec-name">${esc(r.name)}</span><span class="rec-id">${esc(r.patientId)}</span></div><div class="rec-dob">DOB ${esc(r.dob)}</div><p class="rec-notes">${esc(r.notes)}</p></button>`).join('');
+  if(!list.length){el.innerHTML=`<div class="empty">${records.length?'No matching records.':'No records yet.'}</div>`;return}
+  el.innerHTML=list.map(({r,i})=>`<button class="rec${r.resolved?' done':''}" data-i="${i}"><div class="rec-top"><span class="rec-name">${esc(r.name)}</span><span class="rec-id">${esc(r.patientId)}${r.resolved?' ✓':''}</span></div><div class="rec-dob">DOB ${esc(r.dob)}</div><p class="rec-notes">${esc(r.notes)}</p></button>`).join('');
 }
 async function load(){
   if(!records.length)$('recs').innerHTML='<div class="empty">Loading records</div>';
@@ -369,16 +388,30 @@ async function load(){
     const data=await res.json();
     records=Array.isArray(data)?data:[];
     used=new Set(records.map(r=>String(r.patientId).toUpperCase()));
-    setStatus('ok','Connected');
+    setStatus('ok','Connected');load.n=0;
     if(!idTouched)$('pid').value=nextId();
     checkId();renderRecords();
   }catch(e){
     setStatus('err','Offline');
+    if(!document.hidden&&(load.n=(load.n||0)+1)<=6)setTimeout(load,8000);
     if(!records.length)$('recs').innerHTML='<div class="empty">Could not reach the server. It may be waking up, try again in a moment.</div>';
     if(!idTouched&&!$('pid').value)$('pid').value=nextId();
   }
 }
 $('recs').addEventListener('click',e=>{const c=e.target.closest('.rec');if(c)openModal(records[+c.dataset.i])});
+$('q').addEventListener('input',renderRecords);
+$('p-view').addEventListener('click',e=>{const b=e.target.closest('.seg button');if(b)save('filter',b.dataset.v)});
+$('clearDone').onclick=async()=>{
+  const n=records.filter(r=>r.resolved).length;if(!n)return;
+  if(!confirm(`Permanently delete ${n} resolved record${n>1?'s':''}? This can't be undone.`))return;
+  const btn=$('clearDone');btn.disabled=true;
+  try{
+    const res=await fetch(API_URL+'?resolved=true',{method:'DELETE'});if(!res.ok)throw 0;
+    await load();
+    try{const all=getAdd();Object.keys(all).forEach(k=>{if(!used.has(k.toUpperCase()))delete all[k]});localStorage.setItem(AK,JSON.stringify(all))}catch(e){}
+    toast(`Cleared ${n} resolved record${n>1?'s':''}`);
+  }catch(err){toast('Could not clear. Check the server and try again.');btn.disabled=false}
+};
 
 /* ---------- patient id ---------- */
 function checkId(){
@@ -426,12 +459,22 @@ $('mSave').onclick=()=>{
   $('mNew').value='';renderAdd();toast('Info added');
 };
 function openModal(r){
-  curRec=r;$('mNew').value='';renderAdd();
+  curRec=r;$('mNew').value='';renderAdd();syncResolve();
   $('mName').textContent=r.name||'Unnamed';$('mId').textContent=r.patientId||'-';
   $('mDob').textContent=r.dob||'-';$('mNotes').textContent=r.notes||'No notes';
   $('ov').classList.add('on');
 }
 const closeModal=()=>$('ov').classList.remove('on');
+function syncResolve(){$('mResolve').textContent=curRec.resolved?'Reopen record':'Mark resolved'}
+$('mResolve').onclick=async()=>{
+  if(!curRec.id)return toast('Deploy the updated server.js first');
+  const next=!curRec.resolved;
+  try{
+    const res=await fetch(API_URL+'/'+encodeURIComponent(curRec.id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({resolved:next})});
+    if(!res.ok)throw 0;
+    curRec.resolved=next;syncResolve();renderRecords();toast(next?'Marked resolved':'Reopened');
+  }catch(err){toast('Could not update record')}
+};
 $('mX').onclick=closeModal;
 $('ov').addEventListener('pointerdown',e=>{if(e.target===$('ov'))closeModal()});
 addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
@@ -442,9 +485,8 @@ const cv=$('fx'),cx=cv.getContext('2d');let ps=[],pc='255,255,255';
 function size(){cv.width=innerWidth;cv.height=innerHeight}
 addEventListener('resize',size);size();
 function initParticles(){
-  const c=getComputedStyle(html).color||'rgb(255,255,255)';
   const m=getComputedStyle(document.body).color.match(/\d+/g);if(m)pc=m.slice(0,3).join(',');
-  ps=[];if(!S.particles)return;
+  ps=[];if(!S.particles||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
   for(let i=0;i<S.count;i++)ps.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.8+.8,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5});
 }
 (function loop(){
